@@ -1,5 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@mohak34/opencode-notifier@latest"],
   "agent": {
     "mentor": {
       "description": "Senior Architect mentor - helpful first, challenging when it matters",
