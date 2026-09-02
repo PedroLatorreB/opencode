@@ -12,7 +12,7 @@
  * https://github.com/kdcokenny/opencode-background-agents
  *
  * Adaptations:
- * - Inlined kdco-primitives (types, getProjectId, logWarn, withTimeout, TimeoutError)
+ * - Inlined kdco-primitives (types, getProjectId, logWarn, withTimeout)
  * - Exported as `BackgroundAgents` (matching the Engram plugin convention)
  * - All imports resolved to available node_modules
  */
@@ -37,13 +37,20 @@ export type OpencodeClient = ReturnType<typeof createOpencodeClient>
 // INLINED: kdco-primitives/with-timeout
 // ==========================================
 
-export class TimeoutError extends Error {
-  readonly name = "TimeoutError" as const
-  readonly timeoutMs: number
-  constructor(message: string, timeoutMs: number) {
-    super(message)
-    this.timeoutMs = timeoutMs
-  }
+interface TimeoutErrorLike extends Error {
+  name: "TimeoutError"
+  timeoutMs: number
+}
+
+function createTimeoutError(message: string, timeoutMs: number): TimeoutErrorLike {
+  const error = new Error(message) as TimeoutErrorLike
+  error.name = "TimeoutError"
+  error.timeoutMs = timeoutMs
+  return error
+}
+
+function isTimeoutError(error: unknown): error is TimeoutErrorLike {
+  return error instanceof Error && error.name === "TimeoutError" && "timeoutMs" in error
 }
 
 export async function withTimeout<T>(
@@ -53,13 +60,13 @@ export async function withTimeout<T>(
 ): Promise<T> {
   if (typeof ms !== "number" || ms < 0)
     throw new Error(`withTimeout: timeout must be a non-negative number, got ${ms}`)
-  if (ms === 0) throw new TimeoutError(message, ms)
+  if (ms === 0) throw createTimeoutError(message, ms)
   let timeoutId: ReturnType<typeof setTimeout>
   return Promise.race([
     promise.finally(() => clearTimeout(timeoutId)),
     new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
-        reject(new TimeoutError(message, ms))
+        reject(createTimeoutError(message, ms))
       }, ms)
     }),
   ])
@@ -134,7 +141,7 @@ async function getProjectId(projectRoot: string): Promise<string> {
       env: { ...process.env, GIT_DIR: undefined, GIT_WORK_TREE: undefined },
     })
     const exitCode = await withTimeout(proc.exited, 5000, "git rev-list timed out").catch((e) => {
-      if (e instanceof TimeoutError) proc.kill()
+      if (isTimeoutError(e)) proc.kill()
       return 1
     })
     if (exitCode === 0) {
@@ -861,11 +868,16 @@ ${delegation.error ? `\n<error>${delegation.error}</error>` : ""}
         },
       })
 
-      // If all delegations complete, send a minimal completion notice that triggers response
+      // If all delegations complete, trigger a response with the final result included.
+      // Some agents only react to the noReply=false prompt, so keeping the payload here
+      // prevents the orchestrator from waking up without the sub-agent output.
       if (allComplete) {
         const allCompleteNotification = `<task-notification>
 <status>completed</status>
-<summary>All delegations complete.</summary>
+<task-id>${delegation.id}</task-id>
+<summary>All delegations complete. Last completed: Agent "${title}" ${statusText}.</summary>
+<result>${result}</result>
+${delegation.error ? `\n<error>${delegation.error}</error>` : ""}
 </task-notification>`
 
         await this.client.session.prompt({

@@ -20,6 +20,17 @@ When saving artifacts with `mem_save`, always set `topic_key` to the artifact's 
 
 ---
 
+## SQL Review Policy
+
+When an SDD phase touches SQL, queries, migrations, repositories, ORMs, indexes, joins, reports, or database performance:
+
+- Load and apply the `sql-review` skill if available.
+- Never let `SELECT *` or `COUNT(*)` pass silently.
+- Flag visible SQL bad practices and include them in risks, findings, tasks, or verification notes as appropriate for the phase.
+- Propose concrete, pragmatic alternatives instead of only naming the issue.
+
+---
+
 ## Return Envelope
 
 Every phase MUST return a structured envelope to the orchestrator. Include ALL of these fields:
