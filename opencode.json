@@ -20,6 +20,29 @@
           "name": "Qwen 2.5 Coder 3B"
         }
       }
+    },
+    "llama.cpp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama.cpp local",
+      "options": {
+        "baseURL": "{env:LLAMA_HOST}:8080/v1/"
+      },
+      "models": {
+        "gemma-4-E4B": {
+          "name": "unsloth/gemma-4-E4B-it-GGUF",
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        },
+        "qwen-3.5-4B": {
+          "name": "unsloth/Qwen3.5-4B-GGUF:UD-Q4_K_XL",
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        }
+      }
     }
   },
   "agent": {
